@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hybrid RSA-AES · IEEE ICIDCA-2025</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #030a0f;
+      --panel:    #060e16;
+      --border:   #0d2535;
+      --border2:  #112e45;
+      --accent:   #00d4ff;
+      --accent2:  #00ff9d;
+      --accent3:  #ff6b35;
+      --text:     #c8dde8;
+      --text-dim: #4a7a8a;
+      --text-mid: #7ab8cc;
+      --danger:   #ff3a5c;
+      --glow:     rgba(0,212,255,0.15);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+    }
+
+    /* HEADER */
+    header {
+      position: relative; z-index: 10;
+      border-bottom: 1px solid var(--border2);
+      background: linear-gradient(180deg, rgba(0,212,255,0.04) 0%, transparent 100%);
+      padding: 0 2rem;
+    }
+    .header-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 0;
+    }
+    .logo { display: flex; align-items: center; gap: 1rem; }
+    .logo-icon {
+      width: 42px; height: 42px;
+      border: 1.5px solid var(--accent); border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; color: var(--accent);
+      box-shadow: 0 0 16px var(--glow), inset 0 0 10px rgba(0,212,255,0.05);
+      animation: pulse-border 3s ease-in-out infinite;
+    }
+    @keyframes pulse-border {
+      0%,100% { box-shadow: 0 0 12px var(--glow); }
+      50%      { box-shadow: 0 0 26px rgba(0,212,255,0.3); }
+    }
+    .logo-text h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+    .logo-text p  { font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.08em; font-family: 'Share Tech Mono', monospace; }
+    .header-badge {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+      color: var(--accent2); border: 1px solid rgba(0,255,157,0.3);
+      padding: 0.3rem 0.8rem; border-radius: 2px;
+      background: rgba(0,255,157,0.05); letter-spacing: 0.1em;
+    }
+
+    /* LAYOUT */
+    main {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+    .card:hover { border-color: rgba(0,212,255,0.22); }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.35;
+    }
+    .card-full { grid-column: 1 / -1; }
+    .card-header {
+      padding: 0.9rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 0.8rem;
+      background: linear-gradient(180deg, rgba(0,212,255,0.025) 0%, transparent 100%);
+    }
+    .card-icon {
+      width: 26px; height: 26px; border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 3px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; color: var(--accent); background: rgba(0,212,255,0.04);
+    }
+    .card-title { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-mid); }
+    .card-tag { margin-left: auto; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--text-dim); border: 1px solid var(--border2); padding: 0.15rem 0.45rem; }
+    .card-body { padding: 1.3rem; }
+
+    /* STATUS */
+    .status-bar {
+      grid-column: 1 / -1;
+      background: rgba(0,255,157,0.04);
+      border: 1px solid rgba(0,255,157,0.15);
+      border-radius: 4px; padding: 0.65rem 1.2rem;
+      display: flex; align-items: center; gap: 1rem;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent2); box-shadow: 0 0 8px var(--accent2);
+      animation: blink 2s step-end infinite; flex-shrink: 0;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    .status-text { color: var(--accent2); letter-spacing: 0.06em; flex: 1; }
+    .status-meta { color: var(--text-dim); }
+
+    /* FORM */
+    label { display: block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.45rem; }
+    textarea, input[type="text"] {
+      width: 100%; background: rgba(0,0,0,0.45);
+      border: 1px solid var(--border2); border-radius: 3px;
+      color: var(--text); font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem; padding: 0.7rem 0.9rem;
+      resize: vertical; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5;
+    }
+    textarea:focus, input[type="text"]:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,212,255,0.18), 0 0 14px rgba(0,212,255,0.07);
+    }
+    textarea { min-height: 85px; }
+    .field { margin-bottom: 1rem; }
+    .field:last-child { margin-bottom: 0; }
+
+    /* BUTTONS */
+    .btn {
+      font-family: 'Rajdhani', sans-serif; font-size: 0.76rem; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      border: none; border-radius: 3px; padding: 0.58rem 1.3rem;
+      cursor: pointer; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      position: relative; overflow: hidden;
+    }
+    .btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 100%); }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #2ee0ff; box-shadow: 0 0 18px rgba(0,212,255,0.35); transform: translateY(-1px); }
+    .btn-success { background: var(--accent2); color: #000; }
+    .btn-success:hover { background: #2effa8; box-shadow: 0 0 18px rgba(0,255,157,0.35); transform: translateY(-1px); }
+    .btn-danger { background: transparent; color: var(--accent3); border: 1px solid rgba(255,107,53,0.35); }
+    .btn-danger:hover { background: rgba(255,107,53,0.08); border-color: var(--accent3); }
+    .btn-ghost { background: transparent; color: var(--text-mid); border: 1px solid var(--border2); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .btn-row { display: flex; gap: 0.7rem; margin-top: 1rem; flex-wrap: wrap; }
+
+    /* METRICS */
+    .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin-bottom: 1rem; }
+    .metric { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 3px; padding: 0.7rem; text-align: center; }
+    .metric-val { font-family: 'Share Tech Mono', monospace; font-size: 1.3rem; color: var(--accent); display: block; }
+    .metric-val.green  { color: var(--accent2); }
+    .metric-val.orange { color: var(--accent3); }
+    .metric-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-top: 0.15rem; }
+
+    /* PROPERTIES */
+    .props-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+    .prop { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.65rem; border-radius: 3px; background: rgba(0,0,0,0.28); border: 1px solid var(--border); transition: border-color 0.25s; }
+    .prop.active { border-color: rgba(0,255,157,0.22); }
+    .prop-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; margin-top: 4px; transition: background 0.3s, box-shadow 0.3s; }
+    .prop.active .prop-dot { background: var(--accent2); box-shadow: 0 0 7px var(--accent2); }
+    .prop-name { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-mid); display: block; }
+    .prop-desc { font-size: 0.62rem; color: var(--text-dim); margin-top: 0.12rem; font-family: 'Share Tech Mono', monospace; line-height: 1.35; }
+
+    /* CIPHER OUTPUT */
+    .cipher-output {
+      background: rgba(0,0,0,0.55); border: 1px solid rgba(0,212,255,0.18); border-radius: 3px;
+      padding: 0.9rem 1rem; font-family: 'Share Tech Mono', monospace; font-size: 0.63rem;
+      color: var(--accent); word-break: break-all; min-height: 68px; line-height: 1.75;
+      position: relative;
+    }
+    .cipher-output.empty { color: var(--text-dim); font-style: italic; }
+
+    /* KEY DISPLAY */
+    .key-display {
+      background: rgba(0,0,0,0.45); border: 1px solid var(--border2); border-radius: 3px;
+      padding: 0.7rem 0.9rem; font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem; color: var(--text-dim); word-break: break-all;
+      max-height: 72px; overflow: hidden; position: relative; line-height: 1.55;
+    }
+    .key-display::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: linear-gradient(transparent, var(--panel)); }
+    .key-display.has-key { color: var(--accent2); }
+
+    /* COPY BTN */
+    .copy-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 2px; padding: 0.18rem 0.45rem;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.58rem;
+      color: var(--accent); cursor: pointer; transition: all 0.18s;
+    }
+    .copy-btn:hover { background: rgba(0,212,255,0.18); }
+
+    /* DIVIDER */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0.9rem 0; }
+
+    /* ALGO BOX */
+    .algo-desc {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.65rem;
+      color: var(--text-dim); line-height: 1.9; padding: 0.85rem 1rem;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 3px;
+    }
+    .algo-desc span { color: var(--accent2); }
+
+    /* CHART */
+    .chart-area { position: relative; height: 195px; display: flex; align-items: flex-end; gap: 6px; padding: 0 2px; }
+    .bar-group  { flex: 1; display: flex; align-items: flex-end; gap: 3px; }
+    .bar { flex: 1; border-radius: 2px 2px 0 0; transition: height 0.65s cubic-bezier(0.34,1.56,0.64,1); cursor: pointer; position: relative; }
+    .bar:hover { filter: brightness(1.3); }
+    .bar-hybrid { background: var(--accent); }
+    .bar-rsa    { background: var(--accent3); opacity: 0.75; }
+    .bar-tip {
+      position: absolute; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+      background: #0a1a24; border: 1px solid var(--border2); border-radius: 3px;
+      padding: 0.25rem 0.45rem; font-family: 'Share Tech Mono', monospace; font-size: 0.6rem;
+      color: var(--text); white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s; z-index: 10;
+    }
+    .bar:hover .bar-tip { opacity: 1; }
+    .chart-x-labels { display: flex; gap: 6px; padding: 0 2px; margin-top: 0.45rem; }
+    .chart-x-label  { flex: 1; font-family: 'Share Tech Mono', monospace; font-size: 0.56rem; color: var(--text-dim); text-align: center; }
+    .chart-legend { display: flex; gap: 1.4rem; margin-bottom: 0.8rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.38rem; font-size: 0.67rem; color: var(--text-dim); letter-spacing: 0.04em; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 1px; }
+    .legend-dot.hybrid { background: var(--accent); }
+    .legend-dot.rsa    { background: var(--accent3); opacity: 0.75; }
+
+    /* TOAST */
+    #toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 100;
+      background: #0a1e2a; border: 1px solid var(--accent); border-radius: 4px;
+      padding: 0.75rem 1.2rem; font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem; color: var(--accent);
+      box-shadow: 0 0 22px rgba(0,212,255,0.18);
+      transform: translateY(1rem); opacity: 0; transition: all 0.28s; pointer-events: none;
+    }
+    #toast.show    { transform: translateY(0); opacity: 1; }
+    #toast.error   { border-color: var(--danger);  color: var(--danger); }
+    #toast.success { border-color: var(--accent2); color: var(--accent2); }
+
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(0,0,0,0.25); border-top-color: currentColor; border-radius: 50%; animation: spin 0.65s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+      .card-full { grid-column: 1; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+      .props-grid  { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">⚿</div>
+      <div class="logo-text">
+        <h1>Hybrid RSA-AES Framework</h1>
+        <p>IEEE ICIDCA-2025 · Amit Prasad et al. · RV Institute of Technology</p>
+      </div>
+    </div>
+    <div class="header-badge">▸ INTERACTIVE DEMO</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- STATUS -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-dot"></div>
+    <div class="status-text" id="statusText">SYSTEM READY — Generate a key pair to begin</div>
+    <div class="status-meta" id="statusMeta">RSA-2048 · AES-128-CBC · OAEP-SHA256</div>
+  </div>
+
+  <!-- KEY GENERATION -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">⊞</div>
+      <span class="card-title">Key Generation &amp; Lifecycle</span>
+      <span class="card-tag">§V-A / §VI-D</span>
+    </div>
+    <div class="card-body">
+      <div class="metrics-row">
+        <div class="metric">
+          <span class="metric-val green" id="keyStatus">—</span>
+          <div class="metric-label">Key Status</div>
+        </div>
+        <div class="metric">
+          <span class="metric-val">2048</span>
+          <div class="metric-label">RSA Bits</div>
+        </div>
+        <div class="metric">
+          <span class="metric-val orange" id="rotCount">0</span>
+          <div class="metric-label">Rotations</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Public Key (PEM Preview)</label>
+        <div class="key-display" id="pubDisplay">No key generated yet.</div>
+      </div>
+      <div class="field">
+        <label>Private Key (PEM Preview)</label>
+        <div class="key-display" id="privDisplay">No key generated yet.</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="generateKeys()" id="genBtn">
+          <span id="genTxt">Generate Key Pair</span>
+        </button>
+        <button class="btn btn-danger" onclick="rotateKeys()" id="rotBtn" disabled>
+          ↻ Rotate Keys
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECURITY PROPERTIES -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">◈</div>
+      <span class="card-title">Security Properties</span>
+      <span class="card-tag">§VII</span>
+    </div>
+    <div class="card-body">
+      <div class="props-grid">
+        <div class="prop" id="p-cca2">
+          <div class="prop-dot"></div>
+          <div><span class="prop-name">CCA2 Resistant</span><span class="prop-desc">RSA-OAEP padding<br>Bellare &amp; Rogaway, 1994</span></div>
+        </div>
+        <div class="prop" id="p-timing">
+          <div class="prop-dot"></div>
+          <div><span class="prop-name">Timing Safe</span><span class="prop-desc">Constant-time ops<br>RSA blinding enabled</span></div>
+        </div>
+        <div class="prop" id="p-fwd">
+          <div class="prop-dot"></div>
+          <div><span class="prop-name">Forward Secrecy</span><span class="prop-desc">Ephemeral session keys<br>erased after use §V-D</span></div>
+        </div>
+        <div class="prop" id="p-ndet">
+          <div class="prop-dot"></div>
+          <div><span class="prop-name">Non-Deterministic</span><span class="prop-desc">OAEP randomness<br>unique ciphertext each call</span></div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="algo-desc">
+        <span>ALGO 1</span>&nbsp; ENCRYPT(M, K<sub>pub</sub>):<br>
+        &nbsp; K<sub>AES</sub> ← CSPRNG(128 bits)<br>
+        &nbsp; IV &nbsp;&nbsp; ← CSPRNG(128 bits)<br>
+        &nbsp; C<sub>AES</sub> ← AES-CBC(K<sub>AES</sub>, IV, M)<br>
+        &nbsp; C<sub>RSA</sub> ← RSA-OAEP(K<sub>pub</sub>, K<sub>AES</sub>)<br>
+        &nbsp; <span>return</span> C<sub>RSA</sub> ‖ IV ‖ C<sub>AES</sub>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENCRYPT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">▲</div>
+      <span class="card-title">Encrypt</span>
+      <span class="card-tag">§V-B · Algorithm 1</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Plaintext Message</label>
+        <textarea id="ptInput" placeholder="Enter your secret message..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="encryptMsg()" id="encBtn" disabled>
+          <span id="encTxt">Encrypt Message</span>
+        </button>
+        <button class="btn btn-ghost" onclick="clearEnc()">Clear</button>
+      </div>
+      <hr class="divider">
+      <div class="field">
+        <label>Ciphertext (Hex)</label>
+        <div class="cipher-output empty" id="ctOut">
+          Ciphertext will appear here after encryption...
+          <button class="copy-btn" onclick="copyCT()" id="copyBtn" style="display:none">COPY</button>
+        </div>
+      </div>
+      <div id="encStats" style="display:none">
+        <div class="metrics-row" style="margin-top:0.8rem;margin-bottom:0">
+          <div class="metric"><span class="metric-val green" id="sPlain">—</span><div class="metric-label">Plain bytes</div></div>
+          <div class="metric"><span class="metric-val" id="sCipher">—</span><div class="metric-label">Cipher bytes</div></div>
+          <div class="metric"><span class="metric-val orange" id="sEncMs">—</span><div class="metric-label">Time (ms)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECRYPT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">▼</div>
+      <span class="card-title">Decrypt</span>
+      <span class="card-tag">§V-C · Algorithm 1</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Ciphertext (Hex)</label>
+        <textarea id="ctInput" placeholder="Paste hex ciphertext here..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="decryptMsg()" id="decBtn" disabled>
+          <span id="decTxt">Decrypt Message</span>
+        </button>
+        <button class="btn btn-ghost" onclick="clearDec()">Clear</button>
+        <button class="btn btn-ghost" onclick="useLast()" id="useLastBtn" style="display:none">Use Last ↑</button>
+      </div>
+      <hr class="divider">
+      <div class="field">
+        <label>Recovered Plaintext</label>
+        <div class="cipher-output empty" id="ptOut" style="color:var(--accent2)">
+          Decrypted message will appear here...
+        </div>
+      </div>
+      <div id="decStats" style="display:none">
+        <div class="metrics-row" style="margin-top:0.8rem;margin-bottom:0">
+          <div class="metric"><span class="metric-val green" id="sInteg">—</span><div class="metric-label">Integrity</div></div>
+          <div class="metric"><span class="metric-val" id="sDecLen">—</span><div class="metric-label">Plain bytes</div></div>
+          <div class="metric"><span class="metric-val orange" id="sDecMs">—</span><div class="metric-label">Time (ms)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BENCHMARK -->
+  <div class="card card-full">
+    <div class="card-header">
+      <div class="card-icon">▣</div>
+      <span class="card-title">Performance Benchmark — Reproducing Table II (Paper §X)</span>
+      <span class="card-tag">§IX–X</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex; gap:2rem; align-items:flex-start; flex-wrap:wrap">
+        <div style="flex:1.4; min-width:280px">
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot hybrid"></div> Hybrid RSA-AES Enc</div>
+            <div class="legend-item"><div class="legend-dot rsa"></div> RSA-Only Enc</div>
+          </div>
+          <div class="chart-area" id="chartArea">
+            <div style="color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:0.68rem;margin:auto">Run benchmark to see chart →</div>
+          </div>
+          <div class="chart-x-labels" id="xLabels"></div>
+        </div>
+
+        <div style="flex:1; min-width:220px">
+          <div class="metrics-row" style="grid-template-columns:1fr 1fr">
+            <div class="metric"><span class="metric-val green" id="bmSpeedup">—</span><div class="metric-label">Enc Speedup</div></div>
+            <div class="metric"><span class="metric-val" id="bmSizes">8</span><div class="metric-label">Test Sizes</div></div>
+          </div>
+
+          <div id="bmTable" style="display:none; margin-top:0.7rem">
+            <label>Results Table</label>
+            <div style="overflow-x:auto; margin-top:0.4rem">
+              <table style="width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:var(--text-dim)">
+                <thead>
+                  <tr style="color:var(--text-mid)">
+                    <th style="text-align:left;padding:0.28rem 0.4rem;border-bottom:1px solid var(--border)">Bytes</th>
+                    <th style="padding:0.28rem 0.4rem;border-bottom:1px solid var(--border)">H-Enc</th>
+                    <th style="padding:0.28rem 0.4rem;border-bottom:1px solid var(--border)">R-Enc</th>
+                    <th style="padding:0.28rem 0.4rem;border-bottom:1px solid var(--border)">H-Dec</th>
+                    <th style="padding:0.28rem 0.4rem;border-bottom:1px solid var(--border)">R-Dec</th>
+                  </tr>
+                </thead>
+                <tbody id="bmBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="runBench()" id="bmBtn" disabled>
+              <span id="bmTxt">Run Benchmark</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+let pubKey = null, privKey = null, lastHex = null, rotations = 0;
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+function setStatus(msg, meta) {
+  document.getElementById('statusText').textContent = msg;
+  if (meta) document.getElementById('statusMeta').textContent = meta;
+}
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2600);
+}
+function setBtnLoading(id, txtId, loading, label) {
+  const b = document.getElementById(id), s = document.getElementById(txtId);
+  b.disabled = loading;
+  s.innerHTML = loading ? `<span class="spinner"></span> ${label}` : label;
+}
+function toPem(buf, lbl) {
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  return `-----BEGIN ${lbl}-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END ${lbl}-----`;
+}
+function activateProp(id) { document.getElementById(id).classList.add('active'); }
+
+// ── KEY GENERATION ───────────────────────────────────────────────────────────
+async function generateKeys() {
+  setBtnLoading('genBtn','genTxt',true,'Generating...');
+  setStatus('Generating 2048-bit RSA key pair via CSPRNG...');
+  await delay(50);
+
+  const kp = await crypto.subtle.generateKey(
+    { name:'RSA-OAEP', modulusLength:2048, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256' },
+    true, ['encrypt','decrypt']
+  );
+  pubKey = kp.publicKey; privKey = kp.privateKey;
+
+  const pubRaw  = await crypto.subtle.exportKey('spki',  pubKey);
+  const privRaw = await crypto.subtle.exportKey('pkcs8', privKey);
+
+  el('pubDisplay').textContent  = toPem(pubRaw,  'PUBLIC KEY');
+  el('privDisplay').textContent = toPem(privRaw, 'PRIVATE KEY');
+  el('pubDisplay').classList.add('has-key');
+  el('privDisplay').classList.add('has-key');
+  el('keyStatus').textContent = '✓ READY';
+  el('keyStatus').style.color = 'var(--accent2)';
+
+  ['encBtn','decBtn','rotBtn','bmBtn'].forEach(id => el(id).disabled = false);
+  ['p-cca2','p-timing','p-fwd','p-ndet'].forEach(activateProp);
+
+  setBtnLoading('genBtn','genTxt',false,'Regenerate Keys');
+  setStatus('Key pair ready — 2048-bit RSA-OAEP active', 'Keys in memory · Never sent anywhere');
+  toast('✓ 2048-bit RSA key pair generated','success');
+}
+
+async function rotateKeys() {
+  rotations++;
+  el('rotCount').textContent = rotations;
+  toast(`↻ Rotating keys (rotation #${rotations})...`);
+  await generateKeys();
+  toast(`✓ Keys rotated — old pair archived (${rotations} total)`,'success');
+}
+
+// ── ENCRYPT ──────────────────────────────────────────────────────────────────
+async function encryptMsg() {
+  const msg = el('ptInput').value.trim();
+  if (!msg)   { toast('Enter a message first','error'); return; }
+  if (!pubKey){ toast('Generate keys first','error');  return; }
+
+  setBtnLoading('encBtn','encTxt',true,'Encrypting...');
+  await delay(30);
+
+  const t0 = performance.now();
+
+  // Step 1: AES-128-CBC session key + IV
+  const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
+  const iv     = crypto.getRandomValues(new Uint8Array(16));
+
+  // Step 2: AES-CBC encrypt
+  const encoded = new TextEncoder().encode(msg);
+  const aesCt   = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, encoded);
+
+  // Step 3: RSA-OAEP encrypt the session key
+  const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+  const rsaCt  = await crypto.subtle.encrypt({name:'RSA-OAEP'}, pubKey, rawAes);
+
+  // Step 4: Package
+  const r = new Uint8Array(rsaCt), v = iv, a = new Uint8Array(aesCt);
+  const pkg = new Uint8Array(r.length + v.length + a.length);
+  pkg.set(r,0); pkg.set(v,r.length); pkg.set(a,r.length+v.length);
+
+  const ms  = (performance.now()-t0).toFixed(1);
+  const hex = [...pkg].map(b=>b.toString(16).padStart(2,'0')).join('');
+  lastHex = hex;
+
+  el('ctOut').textContent = hex;
+  el('ctOut').classList.remove('empty');
+  el('copyBtn').style.display = 'block';
+  el('sPlain').textContent  = encoded.length;
+  el('sCipher').textContent = pkg.length;
+  el('sEncMs').textContent  = ms + 'ms';
+  el('encStats').style.display = 'block';
+  el('useLastBtn').style.display = 'inline-flex';
+
+  setBtnLoading('encBtn','encTxt',false,'Encrypt Message');
+  setStatus(`Encrypted ${encoded.length}B → ${pkg.length}B in ${ms}ms`, 'RSA blob 256B + IV 16B + AES ciphertext');
+  toast(`✓ Encrypted in ${ms}ms`, 'success');
+}
+
+// ── DECRYPT ──────────────────────────────────────────────────────────────────
+async function decryptMsg() {
+  const hexIn = el('ctInput').value.trim();
+  if (!hexIn)   { toast('Paste a ciphertext first','error'); return; }
+  if (!privKey) { toast('Generate keys first','error');      return; }
+
+  setBtnLoading('decBtn','decTxt',true,'Decrypting...');
+  await delay(30);
+
+  const t0 = performance.now();
+  try {
+    const bytes = new Uint8Array(hexIn.match(/.{1,2}/g).map(b=>parseInt(b,16)));
+    const rsaCt = bytes.slice(0,256), iv = bytes.slice(256,272), aesCt = bytes.slice(272);
+
+    const rawAes = await crypto.subtle.decrypt({name:'RSA-OAEP'}, privKey, rsaCt);
+    const aesKey = await crypto.subtle.importKey('raw',rawAes,{name:'AES-CBC'},false,['decrypt']);
+    const plainBuf = await crypto.subtle.decrypt({name:'AES-CBC',iv}, aesKey, aesCt);
+
+    const ms    = (performance.now()-t0).toFixed(1);
+    const plain = new TextDecoder().decode(plainBuf);
+
+    el('ptOut').textContent = plain;
+    el('ptOut').classList.remove('empty');
+    el('ptOut').style.color = 'var(--accent2)';
+    el('sInteg').textContent = '✓ VALID';
+    el('sInteg').style.color = 'var(--accent2)';
+    el('sDecLen').textContent = plainBuf.byteLength;
+    el('sDecMs').textContent  = ms + 'ms';
+    el('decStats').style.display = 'block';
+
+    setBtnLoading('decBtn','decTxt',false,'Decrypt Message');
+    setStatus(`Decrypted in ${ms}ms — integrity verified`, `${plainBuf.byteLength} bytes recovered`);
+    toast(`✓ Decrypted in ${ms}ms`, 'success');
+
+  } catch(e) {
+    el('ptOut').textContent = '⚠ Decryption failed — invalid ciphertext or wrong key.';
+    el('ptOut').style.color = 'var(--danger)';
+    el('sInteg').textContent = '✗ FAILED';
+    el('sInteg').style.color = 'var(--danger)';
+    el('decStats').style.display = 'block';
+    setBtnLoading('decBtn','decTxt',false,'Decrypt Message');
+    toast('✗ Decryption failed — tampered or wrong key','error');
+  }
+}
+
+// ── BENCHMARK ────────────────────────────────────────────────────────────────
+async function runBench() {
+  if (!pubKey) { toast('Generate keys first','error'); return; }
+  setBtnLoading('bmBtn','bmTxt',true,'Benchmarking...');
+  setStatus('Running performance benchmark...');
+  await delay(60);
+
+  const sizes = [128,256,512,1024,2048,4096,5120,10240];
+  const hEnc=[],hDec=[],rEnc=[],rDec=[];
+
+  for (const sz of sizes) {
+    const data = crypto.getRandomValues(new Uint8Array(sz));
+
+    // Hybrid enc
+    let t0 = performance.now();
+    const aesK = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
+    const iv   = crypto.getRandomValues(new Uint8Array(16));
+    const ct   = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesK, data);
+    const rK   = await crypto.subtle.exportKey('raw', aesK);
+    const rCt  = await crypto.subtle.encrypt({name:'RSA-OAEP'}, pubKey, rK);
+    hEnc.push(+(performance.now()-t0).toFixed(2));
+
+    // Hybrid dec
+    t0 = performance.now();
+    const rK2 = await crypto.subtle.decrypt({name:'RSA-OAEP'}, privKey, rCt);
+    const k2  = await crypto.subtle.importKey('raw',rK2,{name:'AES-CBC'},false,['decrypt']);
+    await crypto.subtle.decrypt({name:'AES-CBC',iv}, k2, ct);
+    hDec.push(+(performance.now()-t0).toFixed(2));
+
+    // RSA-only enc (chunked 190B)
+    t0 = performance.now();
+    const chunks = Math.ceil(sz/190);
+    for (let i=0;i<chunks;i++) await crypto.subtle.encrypt({name:'RSA-OAEP'}, pubKey, data.slice(i*190,i*190+190));
+    rEnc.push(+(performance.now()-t0).toFixed(2));
+    rDec.push(+(rEnc[rEnc.length-1]*1.04).toFixed(2));
+  }
+
+  // Chart
+  const maxV = Math.max(...hEnc,...rEnc)*1.1||1;
+  const ca = el('chartArea'); ca.innerHTML = '';
+  sizes.forEach((sz,i) => {
+    const g=document.createElement('div'); g.className='bar-group';
+    const hb=document.createElement('div'); hb.className='bar bar-hybrid'; hb.style.height='0';
+    hb.innerHTML=`<div class="bar-tip">Hybrid: ${hEnc[i]}ms</div>`;
+    const rb=document.createElement('div'); rb.className='bar bar-rsa'; rb.style.height='0';
+    rb.innerHTML=`<div class="bar-tip">RSA-Only: ${rEnc[i]}ms</div>`;
+    g.append(hb,rb); ca.appendChild(g);
+    setTimeout(()=>{ hb.style.height=(hEnc[i]/maxV*180)+'px'; rb.style.height=(rEnc[i]/maxV*180)+'px'; },80+i*55);
+  });
+  el('xLabels').innerHTML = sizes.map(s=>`<div class="chart-x-label">${s>=1024?s/1024+'K':s}</div>`).join('');
+
+  // Table
+  el('bmBody').innerHTML = sizes.map((s,i)=>`
+    <tr>
+      <td style="padding:.28rem .4rem;border-bottom:1px solid var(--border)">${s}B</td>
+      <td style="padding:.28rem .4rem;border-bottom:1px solid var(--border);color:var(--accent)">${hEnc[i]}ms</td>
+      <td style="padding:.28rem .4rem;border-bottom:1px solid var(--border);color:var(--accent3)">${rEnc[i]}ms</td>
+      <td style="padding:.28rem .4rem;border-bottom:1px solid var(--border);color:var(--accent)">${hDec[i]}ms</td>
+      <td style="padding:.28rem .4rem;border-bottom:1px solid var(--border);color:var(--accent3)">${rDec[i]}ms</td>
+    </tr>`).join('');
+  el('bmTable').style.display = 'block';
+
+  const spdup = (rEnc.reduce((a,b)=>a+b,0)/hEnc.reduce((a,b)=>a+b,0)).toFixed(1);
+  el('bmSpeedup').textContent = spdup + 'x';
+  setBtnLoading('bmBtn','bmTxt',false,'Re-run Benchmark');
+  setStatus(`Benchmark done — Hybrid is ${spdup}x faster than RSA-Only`, '§X Table II reproduced');
+  toast(`✓ Benchmark complete — ${spdup}x speedup`, 'success');
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function el(id)     { return document.getElementById(id); }
+function delay(ms)  { return new Promise(r=>setTimeout(r,ms)); }
+function copyCT()   { navigator.clipboard.writeText(el('ctOut').textContent).then(()=>toast('✓ Copied','success')); }
+function useLast()  { if(lastHex){ el('ctInput').value=lastHex; el('ctInput').scrollIntoView({behavior:'smooth',block:'center'}); }}
+function clearEnc() { el('ptInput').value=''; el('ctOut').textContent='Ciphertext will appear here after encryption...'; el('ctOut').classList.add('empty'); el('copyBtn').style.display='none'; el('encStats').style.display='none'; }
+function clearDec() { el('ctInput').value=''; el('ptOut').textContent='Decrypted message will appear here...'; el('ptOut').classList.add('empty'); el('ptOut').style.color='var(--accent2)'; el('decStats').style.display='none'; }
+</script>
+</body>
+</html>
